@@ -37,15 +37,20 @@ jobs:
       - name: Bundle FFmpeg, ImageMagick, qpdf, Pandoc
         run: node scripts/fetch-binaries.mjs
 
-      - name: Bundle Ghostscript (PDF compress / PDF to PNG)
+      - name: Bundle Ghostscript & ImageMagick (PDF compress / PDF to PNG)
         shell: pwsh
         run: |
-          choco install ghostscript -y --no-progress
+          choco install ghostscript imagemagick -y --no-progress
+           # Bundle Ghostscript
           $gs = Get-ChildItem 'C:\Program Files\gs' -Directory | Sort-Object Name -Descending | Select-Object -First 1
           New-Item -ItemType Directory -Force -Path resources\bin\gs | Out-Null
           Copy-Item -Recurse -Force (Join-Path $gs.FullName 'bin') resources\bin\gs\
           Copy-Item -Recurse -Force (Join-Path $gs.FullName 'lib') resources\bin\gs\ -ErrorAction SilentlyContinue
-          & resources\bin\gs\bin\gswin64c.exe --version
+          
+          # Bundle ImageMagick
+          $im = Get-ChildItem 'C:\Program Files\ImageMagick*' -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          New-Item -ItemType Directory -Force -Path resources\bin\magick | Out-Null
+          Copy-Item -Recurse -Force (Join-Path $im.FullName '*') resources\bin\magick\
 
       - name: Verify bundled tools
         run: node scripts/verify-binaries.mjs
