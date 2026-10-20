@@ -34,20 +34,25 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Bundle all binaries (FFmpeg, ImageMagick, qpdf, Pandoc, Ghostscript)
+      - name: Bundle FFmpeg
         run: node scripts/fetch-binaries.mjs
 
-      - name: Bundle Ghostscript & ImageMagick (PDF compress / PDF to PNG)
+      - name: Install binaries via Chocolatey
         shell: pwsh
         run: |
-          choco install ffmpeg imagemagick qpdf pandoc ghostscript -y --no-progress
-            
-          # 1. Bundle FFmpeg
-          $ffmpeg = Get-ChildItem 'C:\ProgramData\chocolatey\lib\ffmpeg*' -Directory | Select-Object -First 1
-          if (-not $ffmpeg) { $ffmpeg = Get-ChildItem 'C:\tools\ffmpeg*' -Directory | Select-Object -First 1 }
-          New-Item -ItemType Directory -Force -Path resources\bin\ffmpeg | Out-Null
-          # (Or let Chocolatey place them in PATH, but let's copy them to resources\bin to match app expectations)
-
+          choco install imagemagick qpdf pandoc ghostscript -y --no-progress
+          
+          # Copy Ghostscript
+          $gs = Get-ChildItem 'C:\Program Files\gs' -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          New-Item -ItemType Directory -Force -Path resources\bin\gs | Out-Null
+          Copy-Item -Recurse -Force (Join-Path $gs.FullName 'bin') resources\bin\gs\
+          Copy-Item -Recurse -Force (Join-Path $gs.FullName 'lib') resources\bin\gs\ -ErrorAction SilentlyContinue
+  
+          # Copy ImageMagick
+          $im = Get-ChildItem 'C:\Program Files\ImageMagick*' -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          New-Item -ItemType Directory -Force -Path resources\bin\magick | Out-Null
+          Copy-Item -Recurse -Force (Join-Path $im.FullName '*') resources\bin\magick\
+        
       - name: Verify bundled tools
         run: node scripts/verify-binaries.mjs
 
