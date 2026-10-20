@@ -34,9 +34,6 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Bundle FFmpeg
-        run: node scripts/fetch-binaries.mjs
-
       - name: Install and Bundle All Binaries (FFmpeg, ImageMagick, qpdf, Pandoc, Ghostscript)
         shell: pwsh
         run: |
