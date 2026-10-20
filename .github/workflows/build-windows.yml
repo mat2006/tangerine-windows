@@ -37,36 +37,50 @@ jobs:
       - name: Install and Bundle All Binaries (FFmpeg, ImageMagick, qpdf, Pandoc, Ghostscript)
         shell: pwsh
         run: |
-          choco install ffmpeg imagemagick qpdf pandoc ghostscript -y --no-progress
-          
-                    # 1. Bundle FFmpeg
-                    $ffmpeg = Get-ChildItem 'C:\ProgramData\chocolatey\lib\ffmpeg*' -Directory | Select-Object -First 1
-                    if (-not $ffmpeg) { $ffmpeg = Get-ChildItem 'C:\tools\ffmpeg*' -Directory | Select-Object -First 1 }
-                    New-Item -ItemType Directory -Force -Path resources\bin\ffmpeg | Out-Null
-                    if ($ffmpeg) { Copy-Item -Recurse -Force (Join-Path $ffmpeg.FullName 'tools\*') resources\bin\ffmpeg\ -ErrorAction SilentlyContinue }
-          
-                    # 2. Bundle ImageMagick
-                    $im = Get-ChildItem 'C:\Program Files\ImageMagick*' -Directory | Sort-Object Name -Descending | Select-Object -First 1
-                    New-Item -ItemType Directory -Force -Path resources\bin\magick | Out-Null
-                    if ($im) { Copy-Item -Recurse -Force (Join-Path $im.FullName '*') resources\bin\magick\ }
-          
-                    # 3. Bundle qpdf
-                    $qpdf = Get-ChildItem 'C:\ProgramData\chocolatey\lib\qpdf*' -Directory | Select-Object -First 1
-                    New-Item -ItemType Directory -Force -Path resources\bin\qpdf | Out-Null
-                    if ($qpdf) { Copy-Item -Recurse -Force (Join-Path $qpdf.FullName 'tools\*') resources\bin\qpdf\ -ErrorAction SilentlyContinue }
-          
-                    # 4. Bundle Pandoc
-                    $pandoc = Get-ChildItem 'C:\ProgramData\chocolatey\lib\pandoc*' -Directory | Select-Object -First 1
-                    New-Item -ItemType Directory -Force -Path resources\bin\pandoc | Out-Null
-                    if ($pandoc) { Copy-Item -Recurse -Force (Join-Path $pandoc.FullName 'tools\*') resources\bin\pandoc\ -ErrorAction SilentlyContinue }
-          
-                    # 5. Bundle Ghostscript
-                    $gs = Get-ChildItem 'C:\Program Files\gs' -Directory | Sort-Object Name -Descending | Select-Object -First 1
-                    New-Item -ItemType Directory -Force -Path resources\bin\gs | Out-Null
-                    if ($gs) {
-                        Copy-Item -Recurse -Force (Join-Path $gs.FullName 'bin') resources\bin\gs\
-                        Copy-Item -Recurse -Force (Join-Path $gs.FullName 'lib') resources\bin\gs\ -ErrorAction SilentlyContinue
-                    }
+                choco install ffmpeg imagemagick qpdf pandoc ghostscript -y --no-progress
+      
+                # Create required target directories
+                New-Item -ItemType Directory -Force -Path resources\bin | Out-Null
+                New-Item -ItemType Directory -Force -Path resources\bin\imagemagick | Out-Null
+                New-Item -ItemType Directory -Force -Path resources\bin\qpdf\bin | Out-Null
+                New-Item -ItemType Directory -Force -Path resources\bin\pandoc | Out-Null
+                New-Item -ItemType Directory -Force -Path resources\bin\gs | Out-Null
+      
+                # 1. FFmpeg & ffprobe
+                $ffmpeg = (Get-Command ffmpeg -ErrorAction SilentlyContinue).Source
+                $ffprobe = (Get-Command ffprobe -ErrorAction SilentlyContinue).Source
+                if ($ffmpeg) { Copy-Item $ffmpeg -Destination resources\bin\ -Force }
+                if ($ffprobe) { Copy-Item $ffprobe -Destination resources\bin\ -Force }
+      
+                # 2. ImageMagick (magick.exe)
+                $magick = (Get-Command magick -ErrorAction SilentlyContinue).Source
+                if (-not $magick) {
+                    $imDir = Get-ChildItem 'C:\Program Files\ImageMagick*' -Directory | Sort-Object Name -Descending | Select-Object -First 1
+                    if ($imDir) { $magick = Join-Path $imDir.FullName 'magick.exe' }
+                }
+                if ($magick -and (Test-Path $magick)) {
+                    Copy-Item $magick -Destination resources\bin\imagemagick\ -Force
+                }
+      
+                # 3. qpdf
+                $qpdf = (Get-Command qpdf -ErrorAction SilentlyContinue).Source
+                if ($qpdf) {
+                    $qpdfBinDir = Split-Path $qpdf -Parent
+                    Copy-Item (Join-Path $qpdfBinDir '*') -Destination resources\bin\qpdf\bin\ -Recurse -Force
+                }
+      
+                # 4. Pandoc
+                $pandoc = (Get-Command pandoc -ErrorAction SilentlyContinue).Source
+                if ($pandoc) {
+                    Copy-Item $pandoc -Destination resources\bin\pandoc\ -Force
+                }
+      
+                # 5. Ghostscript
+                $gs = Get-ChildItem 'C:\Program Files\gs' -Directory | Sort-Object Name -Descending | Select-Object -First 1
+                if ($gs) {
+                    Copy-Item -Recurse -Force (Join-Path $gs.FullName 'bin') resources\bin\gs\
+                    Copy-Item -Recurse -Force (Join-Path $gs.FullName 'lib') resources\bin\gs\ -ErrorAction SilentlyContinue
+                }
         
       - name: Verify bundled tools
         run: node scripts/verify-binaries.mjs
