@@ -35,7 +35,7 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Bundle FFmpeg, ImageMagick, qpdf, Pandoc
-        run: node scripts/fetch-binaries.mjs
+        run: node scripts/fetch-binaries.mjs --system-deps
 
       - name: Bundle Ghostscript (PDF compress / PDF to PNG)
         shell: pwsh
